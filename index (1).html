@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0a4a40">
+<title>Hostel Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--pine:#0f6b5c;--deep:#0a4a40;--ink:#12231d;--tag:#ffd23f;--bg:#eef3f0;--line:#12231d26}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--ink);background:var(--bg) radial-gradient(#12231d14 1px,transparent 1px) 0 0/18px 18px}
+:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
+button,input,select,textarea{font:inherit}
+.top{position:sticky;top:0;z-index:5;background:var(--deep);color:#fff;display:flex;justify-content:space-between;align-items:center;padding:10px 16px}
+.top h1{margin:0;font-size:1.35rem;font-weight:800}.top h1 span{color:var(--tag)}
+.wrap{max-width:980px;margin:auto;padding:0 14px 90px}
+.hero{margin:14px 0;padding:22px 18px;border-radius:18px;color:#fff;background:linear-gradient(135deg,var(--pine),var(--deep))}
+.hero h2{margin:0 0 4px;font-size:1.7rem;font-weight:800;line-height:1.15}
+.hero p{margin:0 0 14px;opacity:.85}
+.hero input{margin:0}
+.inp{display:block;width:100%;margin:0 0 10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.btn{background:var(--pine);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
+.btn.y{background:var(--tag);color:var(--ink)}
+.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 14px;cursor:pointer}
+.top .ghost{background:transparent;color:#fff;border-color:#ffffff66}
+#chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+#chips button{white-space:nowrap;border-radius:99px;padding:7px 14px;border:1px solid var(--line);background:#fff;cursor:pointer}
+#chips .on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#count{margin:0 0 10px;font-size:.9rem;opacity:.65}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:14px}
+article{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 10px #12231d1a;position:relative;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s}
+article:hover{transform:translateY(-3px);box-shadow:0 8px 18px #12231d26}
+.pic{aspect-ratio:4/3;background:linear-gradient(135deg,#d9ebe4,#f3f8f5);display:grid;place-items:center;font-size:3rem}
+.pic img{width:100%;height:100%;object-fit:cover;display:block}
+.price{position:absolute;top:12px;left:0;background:var(--tag);padding:5px 12px 5px 10px;font-weight:800;border-radius:0 8px 8px 0;box-shadow:0 2px 6px #0003}
+.cat{position:absolute;top:12px;right:10px;background:#fffc;border-radius:99px;padding:2px 9px;font-size:.75rem;backdrop-filter:blur(4px)}
+.body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+article h2{margin:0;font-size:1.05rem;font-weight:800}
+.desc{margin:0;font-size:.88rem;opacity:.8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.time{font-size:.75rem;opacity:.55;margin:0}
+.acts{margin-top:auto;padding-top:8px;display:grid;gap:6px}
+.acts a{display:block;text-align:center;text-decoration:none;background:#1faa59;color:#fff;border-radius:10px;padding:9px;font-weight:600;font-size:.9rem}
+.acts .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}.acts .ghost{padding:7px;font-size:.8rem}
+.sk{height:260px;border-radius:16px;background:linear-gradient(90deg,#e2ebe7 25%,#f2f7f4 50%,#e2ebe7 75%) 0 0/200% 100%;animation:sh 1.2s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+.empty{grid-column:1/-1;text-align:center;padding:50px 10px;opacity:.7}.empty b{display:block;font-size:2.4rem}
+.fab{position:fixed;right:16px;bottom:18px;z-index:6;border-radius:99px;padding:14px 20px;font-size:1rem;box-shadow:0 6px 16px #0a4a4066}
+dialog{border:0;border-radius:18px;width:min(380px,92vw);padding:20px}
+dialog h2{margin:0 0 12px}dialog::backdrop{background:#0008}
+.err{color:#a11;font-size:.85rem;margin:8px 0 0}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .3s;z-index:9}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<header class="top"><h1>Hostel<span>Market</span></h1><button class="ghost" id="authBtn">Log in</button></header>
+<div class="wrap">
+  <section class="hero"><h2>Sell it. Swap it. Someone down the corridor needs it.</h2>
+  <p>Snacks, books, cycles, gadgets — from your hostel, for your hostel.</p>
+  <input class="inp" id="q" placeholder="Search for anything" aria-label="Search items"></section>
+  <div id="chips"></div><p id="count"></p><div id="grid"><div class="sk"></div><div class="sk"></div></div>
+</div>
+<button class="btn y fab" id="sellBtn">+ Sell an item</button>
+<div id="toast" role="status"></div>
+
+<dialog id="authD"><h2>Log in or sign up</h2>
+<input class="inp" id="em" type="email" placeholder="Email">
+<input class="inp" id="pw" type="password" placeholder="Password (at least 6 characters)">
+<button class="btn" id="inBtn">Log in</button> <button class="ghost" id="upBtn">Create account</button> <button class="ghost" id="authX">Close</button>
+<p class="err" id="authE"></p></dialog>
+
+<dialog id="sellD"><h2>Sell an item</h2>
+<input class="inp" id="t" placeholder="What are you selling?">
+<textarea class="inp" id="d" rows="3" placeholder="Condition, age, other details"></textarea>
+<input class="inp" id="p" type="number" placeholder="Price in ₹">
+<select class="inp" id="c"></select>
+<input class="inp" id="ph" placeholder="WhatsApp number (10 digits)" inputmode="numeric">
+<input class="inp" id="f" type="file" accept="image/*">
+<button class="btn" id="postBtn">Post listing</button> <button class="ghost" id="cancelBtn">Cancel</button>
+<p class="err" id="sellE"></p></dialog>
+
+<script>
+const SUPABASE_URL = 'https://ohuayuhkhuudwpctlecx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Gq_2lxwY-qsSw7UVXLqeSA_2axwayDz';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = s => document.querySelector(s);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const CATS = ['Books','Electronics','Furniture','Cycles','Clothes','Other'];
+const EMO = {All:'✨',Books:'📚',Electronics:'🎧',Furniture:'🪑',Cycles:'🚲',Clothes:'👕',Other:'📦'};
+let user = null, items = [], cat = 'All';
+$('#c').innerHTML = CATS.map(c => `<option value="${c}">${EMO[c]} ${c}</option>`).join('');
+
+function ago(d){const s=(Date.now()-new Date(d))/1000;if(s<3600)return Math.max(1,Math.floor(s/60))+' min ago';if(s<86400)return Math.floor(s/3600)+' h ago';return Math.floor(s/86400)+' d ago'}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+async function load() {
+  const { data } = await sb.from('listings').select('*, profiles(phone)').eq('is_sold', false).order('created_at', { ascending: false });
+  items = data || []; render();
+}
+function render() {
+  $('#chips').innerHTML = ['All', ...CATS].map(c => `<button class="${c === cat ? 'on' : ''}" data-c="${c}">${EMO[c]} ${c}</button>`).join('');
+  const q = $('#q').value.toLowerCase();
+  const list = items.filter(i => i.title.toLowerCase().includes(q) && (cat === 'All' || i.category === cat));
+  $('#count').textContent = list.length ? `${list.length} item${list.length > 1 ? 's' : ''} for sale` : '';
+  $('#grid').innerHTML = list.map(i => {
+    const wa = String(i.profiles?.phone || '').replace(/\D/g, '');
+    const mine = user && user.id === i.seller_id;
+    return `<article>
+      <div class="pic">${i.image_url ? `<img loading="lazy" src="${esc(i.image_url)}" alt="${esc(i.title)}">` : EMO[i.category] || '📦'}</div>
+      <span class="price">₹${esc(i.price)}</span><span class="cat">${esc(i.category)}</span>
+      <div class="body"><h2>${esc(i.title)}</h2><p class="desc">${esc(i.description)}</p><p class="time">${ago(i.created_at)}</p>
+      <div class="acts">
+        ${wa ? `<a target="_blank" rel="noopener" href="https://wa.me/91${wa}?text=${encodeURIComponent('Hi, is "' + i.title + '" still available?')}">Chat on WhatsApp</a>` : ''}
+        ${mine ? `<div class="row"><button class="ghost" data-sold="${esc(i.id)}">Mark sold</button><button class="ghost" data-del="${esc(i.id)}">Delete</button></div>` : ''}
+      </div></div></article>`;
+  }).join('') || `<div class="empty"><b>🛒</b>Nothing here yet.<br>Be the first to sell something!</div>`;
+}
+$('#chips').onclick = e => { const c = e.target.closest('button')?.dataset.c; if (c) { cat = c; render(); } };
+$('#grid').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.sold) { await sb.from('listings').update({ is_sold: true }).eq('id', b.dataset.sold); toast('Marked as sold'); load(); }
+  if (b.dataset.del && confirm('Delete this listing?')) { await sb.from('listings').delete().eq('id', b.dataset.del); toast('Listing deleted'); load(); }
+};
+$('#q').oninput = render;
+
+function setUser(u) { user = u; $('#authBtn').textContent = u ? 'Log out' : 'Log in'; render(); }
+sb.auth.getUser().then(({ data }) => setUser(data.user));
+$('#authBtn').onclick = async () => { if (user) { await sb.auth.signOut(); setUser(null); toast('Logged out'); } else $('#authD').showModal(); };
+$('#authX').onclick = () => $('#authD').close();
+async function auth(kind) {
+  const creds = { email: $('#em').value.trim(), password: $('#pw').value };
+  if (!creds.email || !creds.password) return $('#authE').textContent = 'Enter your email and a password first.';
+  const { data, error } = kind === 'up' ? await sb.auth.signUp(creds) : await sb.auth.signInWithPassword(creds);
+  if (error) return $('#authE').textContent = error.message;
+  $('#authE').textContent = ''; $('#authD').close(); setUser(data.user); toast('Welcome!');
+}
+$('#inBtn').onclick = () => auth('in'); $('#upBtn').onclick = () => auth('up');
+
+$('#sellBtn').onclick = () => user ? $('#sellD').showModal() : $('#authD').showModal();
+$('#cancelBtn').onclick = () => $('#sellD').close();
+$('#postBtn').onclick = async () => {
+  const err = m => $('#sellE').textContent = m, btn = $('#postBtn');
+  const phone = $('#ph').value.trim();
+  if (!$('#t').value.trim() || !$('#p').value || !/^\d{10}$/.test(phone)) return err('Add a title, a price and a 10-digit WhatsApp number.');
+  btn.disabled = true; btn.textContent = 'Posting…'; err('');
+  try {
+    await sb.from('profiles').upsert({ id: user.id, phone });
+    let image_url = null; const file = $('#f').files[0];
+    if (file) {
+      const path = `${user.id}/${Date.now()}-${file.name.replace(/[^\w.]/g, '_')}`;
+      const { error } = await sb.storage.from('listing-images').upload(path, file);
+      if (error) return err(error.message);
+      image_url = sb.storage.from('listing-images').getPublicUrl(path).data.publicUrl;
+    }
+    const { error } = await sb.from('listings').insert({ seller_id: user.id, title: $('#t').value.trim(), description: $('#d').value.trim(), price: $('#p').value, category: $('#c').value, image_url });
+    if (error) return err(error.message);
+    $('#sellD').close(); ['#t','#d','#p','#f'].forEach(s => $(s).value = ''); toast('Listing posted!'); load();
+  } finally { btn.disabled = false; btn.textContent = 'Post listing'; }
+};
+load();
+</script></body></html>
