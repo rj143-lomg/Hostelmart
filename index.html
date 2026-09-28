@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hostel Market</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#eef3f0;color:#12231d}
+:focus-visible{outline:2px solid #0f6b5c;outline-offset:2px}
+header,main{max-width:960px;margin:auto;padding:12px 16px}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font-size:1.7rem;font-weight:800}
+button,input,select,textarea{font:inherit}
+.btn{background:#0f6b5c;color:#fff;border:0;border-radius:6px;padding:9px 14px;font-weight:600;cursor:pointer}
+.ghost{background:#fff;color:#12231d;border:1px solid #12231d55;border-radius:6px;padding:9px 14px;cursor:pointer}
+.inp{display:block;width:100%;margin:0 0 10px;padding:9px;border:1px solid #12231d55;border-radius:6px;background:#fff}
+#chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px}
+#chips button{white-space:nowrap;border-radius:99px;padding:5px 12px;border:1px solid #12231d55;background:#fff;cursor:pointer}
+#chips .on{background:#12231d;color:#fff}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+article{background:#fff;border-radius:6px;box-shadow:0 1px 4px #0002;padding:8px;position:relative}
+article img,.ph{width:100%;height:150px;object-fit:cover;border-radius:4px;background:#eef3f0;display:block}
+.price{position:absolute;top:16px;left:0;background:#ffd23f;padding:4px 10px;font-weight:700;box-shadow:0 1px 3px #0003}
+article h2{font-size:1rem;margin:8px 0 2px}article p{margin:2px 0;font-size:.85rem}
+article a,article .ghost{display:block;text-align:center;margin-top:8px;text-decoration:none;font-size:.85rem;width:100%}
+.empty{grid-column:1/-1;text-align:center;padding:40px 0;opacity:.6}
+dialog{border:0;border-radius:10px;width:min(360px,92vw);padding:18px}
+dialog::backdrop{background:#0006}.err{color:#a11;font-size:.85rem}
+</style></head><body>
+<header><h1>Hostel Market</h1>
+<nav><button class="btn" id="sellBtn">Sell an item</button> <button class="ghost" id="authBtn">Log in</button></nav></header>
+<main>
+<input class="inp" id="q" placeholder="Search items" aria-label="Search items">
+<div id="chips"></div><div id="grid"></div>
+</main>
+
+<dialog id="authD"><h2>Log in or sign up</h2>
+<input class="inp" id="em" type="email" placeholder="Email">
+<input class="inp" id="pw" type="password" placeholder="Password (at least 6 characters)">
+<button class="btn" id="inBtn">Log in</button> <button class="ghost" id="upBtn">Create account</button>
+<p class="err" id="authE"></p></dialog>
+
+<dialog id="sellD"><h2>Sell an item</h2>
+<input class="inp" id="t" placeholder="What are you selling?">
+<textarea class="inp" id="d" placeholder="Condition, age, other details"></textarea>
+<input class="inp" id="p" type="number" placeholder="Price in ₹">
+<select class="inp" id="c"></select>
+<input class="inp" id="ph" placeholder="WhatsApp number (10 digits)" inputmode="numeric">
+<input class="inp" id="f" type="file" accept="image/*">
+<button class="btn" id="postBtn">Post listing</button> <button class="ghost" id="cancelBtn">Cancel</button>
+<p class="err" id="sellE"></p></dialog>
+
+<script>
+// 1) Paste your two Supabase values here (Project Settings > API):
+const SUPABASE_URL = 'PASTE_PROJECT_URL';
+const SUPABASE_KEY = 'PASTE_ANON_KEY';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = s => document.querySelector(s);
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const CATS = ['Books','Electronics','Furniture','Cycles','Clothes','Other'];
+let user = null, items = [], cat = 'All';
+
+$('#c').innerHTML = CATS.map(c => `<option>${c}</option>`).join('');
+
+async function load() {
+  const { data } = await sb.from('listings').select('*, profiles(phone)').eq('is_sold', false).order('created_at', { ascending: false });
+  items = data || []; render();
+}
+function render() {
+  $('#chips').innerHTML = ['All', ...CATS].map(c => `<button class="${c === cat ? 'on' : ''}" data-c="${c}">${c}</button>`).join('');
+  const q = $('#q').value.toLowerCase();
+  const list = items.filter(i => i.title.toLowerCase().includes(q) && (cat === 'All' || i.category === cat));
+  $('#grid').innerHTML = list.map(i => {
+    const wa = String(i.profiles?.phone || '').replace(/\D/g, '');
+    return `<article>
+      ${i.image_url ? `<img src="${esc(i.image_url)}" alt="${esc(i.title)}">` : '<div class="ph"></div>'}
+      <span class="price">₹${esc(i.price)}</span>
+      <h2>${esc(i.title)}</h2><p>${esc(i.category)}</p><p>${esc(i.description)}</p>
+      ${wa ? `<a class="btn" target="_blank" href="https://wa.me/91${wa}?text=${encodeURIComponent('Hi, is "' + i.title + '" still available?')}">Message on WhatsApp</a>` : ''}
+      ${user && user.id === i.seller_id ? `<button class="ghost" data-sold="${esc(i.id)}">Mark as sold</button>` : ''}
+    </article>`;
+  }).join('') || '<p class="empty">Nothing listed here yet. Be the first to sell something.</p>';
+}
+$('#chips').onclick = e => { if (e.target.dataset.c) { cat = e.target.dataset.c; render(); } };
+$('#grid').onclick = async e => {
+  const id = e.target.dataset.sold; if (!id) return;
+  await sb.from('listings').update({ is_sold: true }).eq('id', id); load();
+};
+$('#q').oninput = render;
+
+function setUser(u) { user = u; $('#authBtn').textContent = u ? 'Log out' : 'Log in'; render(); }
+sb.auth.getUser().then(({ data }) => setUser(data.user));
+$('#authBtn').onclick = async () => { if (user) { await sb.auth.signOut(); setUser(null); } else $('#authD').showModal(); };
+async function auth(kind) {
+  const creds = { email: $('#em').value, password: $('#pw').value };
+  const { data, error } = kind === 'up' ? await sb.auth.signUp(creds) : await sb.auth.signInWithPassword(creds);
+  if (error) return $('#authE').textContent = error.message;
+  $('#authD').close(); setUser(data.user);
+}
+$('#inBtn').onclick = () => auth('in'); $('#upBtn').onclick = () => auth('up');
+
+$('#sellBtn').onclick = () => user ? $('#sellD').showModal() : $('#authD').showModal();
+$('#cancelBtn').onclick = () => $('#sellD').close();
+$('#postBtn').onclick = async () => {
+  const err = m => $('#sellE').textContent = m;
+  const phone = $('#ph').value.trim();
+  if (!$('#t').value || !$('#p').value || !/^\d{10}$/.test(phone)) return err('Add a title, a price and a 10-digit WhatsApp number.');
+  await sb.from('profiles').upsert({ id: user.id, phone });
+  let image_url = null; const file = $('#f').files[0];
+  if (file) {
+    const path = `${user.id}/${Date.now()}-${file.name.replace(/[^\w.]/g, '_')}`;
+    const { error } = await sb.storage.from('listing-images').upload(path, file);
+    if (error) return err(error.message);
+    image_url = sb.storage.from('listing-images').getPublicUrl(path).data.publicUrl;
+  }
+  const { error } = await sb.from('listings').insert({ seller_id: user.id, title: $('#t').value, description: $('#d').value, price: $('#p').value, category: $('#c').value, image_url });
+  if (error) return err(error.message);
+  $('#sellD').close(); ['#t','#d','#p','#ph','#f'].forEach(s => $(s).value = ''); load();
+};
+load();
+</script></body></html>
